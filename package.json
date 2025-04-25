@@ -1,0 +1,34 @@
+{
+  "name": "agent-bridge",
+  "version": "1.0.0",
+  "description": "Bridge pour interagir avec les agents Masumi via des plateformes de messagerie",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "deploy-contract": "node scripts/deploy.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "masumi",
+    "blockchain",
+    "ai",
+    "agent",
+    "messaging"
+  ],
+  "author": "Votre Nom",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "body-parser": "^1.20.0",
+    "discord.js": "^14.6.0",
+    "dotenv": "^16.0.1",
+    "ethers": "^5.6.9",
+    "express": "^4.18.1",
+    "node-telegram-bot-api": "^0.58.0",
+    "whatsapp-web.js": "^1.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.19"
+  }
+}
