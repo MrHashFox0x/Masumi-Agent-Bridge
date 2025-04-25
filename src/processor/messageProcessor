@@ -1,0 +1,133 @@
+const axios = require('axios');
+const ethers = require('ethers');
+const contractABI = require('../../artifacts/contracts/AgentBridgeAuth.sol/AgentBridgeAuth.json').abi;
+
+// Initialize contract interaction
+const provider = new ethers.providers.JsonRpcProvider(`https://polygon-mumbai.infura.io/v3/${process.env.INFURA_KEY}`);
+const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, provider);
+
+// Modèles de commandes simples
+const commandPatterns = [
+  {
+    patterns: ['prix de', 'cours de', 'valeur de'],
+    handler: async (text) => {
+      // Extrait le nom de l'actif
+      const matches = text.match(/prix de ([a-zA-Z0-9]+)/i) || 
+                      text.match(/cours de ([a-zA-Z0-9]+)/i) ||
+                      text.match(/valeur de ([a-zA-Z0-9]+)/i);
+      
+      if (matches && matches[1]) {
+        const asset = matches[1].toUpperCase();
+        return await getPriceInfo(asset);
+      }
+      return "Je n'ai pas compris quel actif vous voulez consulter.";
+    }
+  },
+  {
+    patterns: ['tendance', 'analyse de marché', 'prédiction'],
+    handler: async (text) => {
+      // Extrait le nom de l'actif s'il est mentionné
+      const matches = text.match(/tendance (?:pour|de) ([a-zA-Z0-9]+)/i) ||
+                      text.match(/analyse de marché (?:pour|de) ([a-zA-Z0-9]+)/i) ||
+                      text.match(/prédiction (?:pour|de) ([a-zA-Z0-9]+)/i);
+      
+      const asset = matches && matches[1] ? matches[1].toUpperCase() : 'BTC';
+      return await getMarketAnalysis(asset);
+    }
+  },
+  {
+    patterns: ['résume', 'actualités', 'news'],
+    handler: async (text) => {
+      return await getNewsDigest();
+    }
+  }
+];
+
+// Fonction principale de traitement des messages
+async function processMessage(text, platform, platformId) {
+  try {
+    // Obtenir l'adresse du portefeuille de l'utilisateur
+    let userAddress;
+    if (platform === 'telegram') {
+      userAddress = await contract.getAddressFromTelegram(platformId);
+    } else if (platform === 'whatsapp') {
+      userAddress = await contract.getAddressFromWhatsapp(platformId);
+    } else if (platform === 'discord') {
+      userAddress = await contract.getAddressFromDiscord(platformId);
+    }
+    
+    if (userAddress === '0x0000000000000000000000000000000000000000') {
+      return "Vous devez d'abord lier votre portefeuille.";
+    }
+    
+    // Obtenir les préférences de l'utilisateur
+    const preferences = await contract.getUserPreferences(userAddress);
+    
+    // Vérifier si le message correspond à un modèle connu
+    for (const command of commandPatterns) {
+      for (const pattern of command.patterns) {
+        if (text.toLowerCase().includes(pattern)) {
+          return await command.handler(text);
+        }
+      }
+    }
+    
+    // Si aucun modèle ne correspond, transmettre à l'agent Masumi générique
+    return await forwardToMasumiAgent(text, preferences.preferredAgent || 'default');
+    
+  } catch (error) {
+    console.error('Error in message processor:', error);
+    return "Je suis désolé, une erreur s'est produite lors du traitement de votre demande.";
+  }
+}
+
+// Fonctions d'appel aux API Masumi (simulées pour le hackathon)
+async function getPriceInfo(asset) {
+  // En production, appel à l'API Masumi pour obtenir le prix
+  // Pour le hackathon, on simule la réponse
+  return `Le prix actuel de ${asset} est de $${Math.floor(Math.random() * 10000)} USD.`;
+}
+
+async function getMarketAnalysis(asset) {
+  // Simuler une analyse de marché
+  const trends = ['haussière', 'baissière', 'stable'];
+  const selectedTrend = trends[Math.floor(Math.random() * trends.length)];
+  
+  return `Analyse de marché pour ${asset}: La tendance actuelle est ${selectedTrend}. Le volume d'échanges est modéré. Les indicateurs techniques suggèrent une volatilité à court terme.`;
+}
+
+async function getNewsDigest() {
+  // Simuler un résumé des actualités
+  return "Résumé des actualités crypto du jour:\n\n" +
+         "1. Une grande banque annonce son support pour les paiements en crypto\n" +
+         "2. Le régulateur européen propose un nouveau cadre pour les stablecoins\n" +
+         "3. Une nouvelle mise à jour majeure est prévue pour Ethereum le mois prochain";
+}
+
+async function forwardToMasumiAgent(text, agentName) {
+  // En production, appel à l'API Masumi
+  // Pour le hackathon, on simule la réponse
+  
+  // Simulation d'appel API (à remplacer par un vrai appel)
+  try {
+    /*
+    const response = await axios.post('https://api.masumi.ai/agent', {
+      agent: agentName,
+      query: text,
+      apiKey: process.env.MASUMI_API_KEY
+    });
+    return response.data.result;
+    */
+    
+    // Pour le hackathon, réponse simulée
+    return `L'agent Masumi répond: J'ai bien reçu votre message "${text}". Voici quelques informations qui pourraient vous être utiles...`;
+    
+  } catch (error) {
+    console.error('Error calling Masumi API:', error);
+    return "Désolé, je n'ai pas pu contacter l'agent Masumi pour le moment.";
+  }
+}
+
+module.exports = {
+  processMessage
+};
